@@ -1,0 +1,150 @@
+# Contributor : Mark E. Lee <mark@markelee.com>
+# Maintainer : Mark E. Lee <mark@markelee.com>
+
+## Changelog
+## libreoffice-git compiles correctly
+## updated to include desktop integration files from the RPM source
+## added conflicts array
+## changed icons to be retrieved from 4.0.3 branch (stable)
+## changed icons to be retrieved from 4.1.0 branch (stable)
+## changed bluez dependency to bluez4
+## moved and cleaned code to pull from git repo to a prepare() function
+## changed '--with-vendor="Arch Linux"' to '--with-vendor=Arch Linux User Repository"'
+## changed all instances of $_gitname to $_gitname
+## added quotes for all directories
+## located proper desktop integration files, removed libreoffice4.1 rpms source
+## changed bluez4 dependency to bluez
+## linked /usr/lib/libreoffice/share/xdg/*.desktop to /usr/bin/
+## updated to ARCH VCS guidelines
+
+pkgname='libreoffice-git'
+pkgdesc='LGPL licensed office suite'
+pkgver=20141220
+pkgrel=1
+url='http://www.libreoffice.org/'
+arch=('x86' 'x86_64')
+license=('LGPL3')
+conflicts=('libreoffice-common'
+	'libreoffice-base'
+	'libreoffice-calc'
+	'libreoffice-draw'
+	'libreoffice-gnome'
+	'libreoffice-impress'
+	'libreoffice-kde4'
+	'libreoffice-math'
+	'libreoffice-sdk'
+	'libreoffice-sdk-doc'
+	'libreoffice-writer'
+	'libreoffice-en-US'
+	'libreoffice-postgresql-connector'
+	'libreoffice-extension-presentation-minimizer'
+	'libreoffice-extension-report-builder'
+	'libreoffice-extension-wiki-publisher'
+	'libreoffice-extension-nlpsolver')
+makedepends=('sane'
+             'perl-archive-zip'
+             'zip'
+             'unzip'
+             'unixodbc'
+             'boost'
+             'apache-ant'
+             'gperf'
+             'kdelibs'
+             'gconf'
+             'cppunit'
+             'beanshell'
+             'vigra'
+             'clucene'
+             'junit'
+             'libmythes'
+             'libwpg'
+             'imagemagick'
+             'glu'
+             'mesa'
+             'gst-plugins-base-libs'
+             'java-environment'
+             'postgresql-libs'
+             'doxygen'
+             'clucene'
+             'bluez')
+depends=("curl>=7.20.0"
+         "hunspell>=1.2.8"
+         "python>=3.3"
+         'libwpd>=0.9.2'
+         'libwps'
+         'libxaw'
+         "neon>=0.28.6"
+         'pango'
+         'nspr'
+         'libjpeg'
+         'libxrandr'
+         'libgl'
+         'dbus-glib'
+         'libxslt'
+         'librsvg'
+         "icu>=50.1-2"
+         'redland'
+         'hyphen'
+         'lpsolve'
+         'gcc-libs'
+         'sh'
+         'libtextcat'
+         'graphite'
+         'lcms2'
+         'poppler>=0.20.5'
+         'hicolor-icon-theme'
+         'desktop-file-utils'
+         'shared-mime-info'
+         'gtk2'
+         'orbit2'
+         'translate-toolkit'
+         'xdg-utils'
+	 'ttf-dejavu'
+	 'libpng12')
+	
+
+## set the git url and git name
+_gitroot='git://anongit.freedesktop.org/libreoffice/core'
+_gitname='libreoffice'
+
+# code pulled from libreoffice-rpm package from AUR (contributor Mark E. Lee <mark@markelee.com>)
+# modified to download x86 source	
+source=("$_gitname::git+$_gitroot")
+md5sums=('SKIP')
+
+build() {  ## build libreoffice
+
+  cd "${srcdir}/$_gitname";  ## enter the git source directory
+     ## run the libreoffice autoconfigure script
+   ./autogen.sh --with-vendor="Arch Linux User Repository" \
+                --with-parallelism=${MAKEFLAGS/-j/} \
+                --with-external-tar="${srcdir}/ext_sources" \
+                --enable-split-app-modules \
+                --prefix=/usr --exec-prefix=/usr --sysconfdir=/etc \
+                --libdir=/usr/lib --mandir=/usr/share/man \
+                --libexec=/usr/bin --bindir=/usr/bin --sbindir=/usr/sbin
+
+   make clean &&  make;  ## clean up files before compiling
+
+}
+
+pkgver() {
+  cd "$pkgname"
+  git describe --long --tags | sed -r 's/([^-]*-g)/r\1/;s/-/./g'
+}
+
+package() {  ## install files from libreoffice into the pkg directory
+  
+  ## install the built files from libreoffice into to the pkg directory
+  cd "${srcdir}/$_gitname";  ## enter the the build directory
+  make DESTDIR=${pkgdir} distro-pack-install;  ## install the compiled files in package directory
+  
+  ## setup desktop links
+  desktop_files=($(ls "${pkgdir}/usr/lib/libreoffice/share/xdg/"));
+  for a in "${desktop_files[@]}"; do
+      ln -s "/usr/lib/libreoffice/share/xdg/$a" "${pkgdir}/usr/share/applications/$a";
+  done;
+  
+#   ## remove symlinks from /usr/share/applications to /usr/lib/xdg/applications and install the actual files
+#   install -dm755 ${pkgdir}/${pkgname}/usr/lib/xdg/share/applications ${pkgdir}/${pkgname}/usr/share/
+}
